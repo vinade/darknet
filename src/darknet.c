@@ -8,6 +8,7 @@
 #include "blas.h"
 #include "connected_layer.h"
 
+extern save_control save_detected;
 extern void predict_classifier(char *datacfg, char *cfgfile, char *weightfile, char *filename, int top);
 extern void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh, float hier_thresh);
 extern void run_voxel(int argc, char **argv);
@@ -381,6 +382,11 @@ int main(int argc, char **argv)
         cuda_set_device(gpu_index);
     }
 #endif
+
+    save_detected.active = 0;
+    if (0 == strcmp(find_char_arg(argc, argv, "-save_detected", "no"), "-save_detected"){
+        save_detected.active = 1;
+    }
 
     if (0 == strcmp(argv[1], "average")){
         average(argc, argv);

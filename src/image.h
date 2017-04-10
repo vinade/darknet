@@ -26,6 +26,13 @@ typedef struct {
     float *data;
 } image;
 
+typedef struct {
+    char active;
+    int counter;
+} save_control;
+
+save_control save_detected;
+
 #ifndef __cplusplus
 #ifdef OPENCV
 image get_image_from_stream(CvCapture *cap);

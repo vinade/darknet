@@ -12,8 +12,13 @@
 
 int windows = 0;
 
+
+// base to a HUE palette
 float colors[6][3] = { {1,0,1}, {0,0,1},{0,1,1},{0,1,0},{1,1,0},{1,0,0} };
 
+/**
+* get color from an interpolation between 2 colors in a HUE palette?
+**/
 float get_color(int c, int x, int max)
 {
     float ratio = ((float)x/max)*5;
@@ -25,6 +30,9 @@ float get_color(int c, int x, int max)
     return r;
 }
 
+/**
+* mix two images
+**/
 void composite_image(image source, image dest, int dx, int dy)
 {
     int x,y,k;
@@ -39,6 +47,9 @@ void composite_image(image source, image dest, int dx, int dy)
     }
 }
 
+/**
+* creates a copy of an image with borders
+**/
 image border_image(image a, int border)
 {
     image b = make_image(a.w + 2*border, a.h + 2*border, a.c);
@@ -211,10 +222,14 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
 
-            draw_box_width(im, left, top, right, bot, width, red, green, blue);
-            if (alphabet) {
-                image label = get_label(alphabet, names[class], (im.h*.03)/10);
-                draw_label(im, top + width, left, label, rgb);
+            if (save_detected.active){
+                save_image_jpg_cut(im, left, top, right, bot)
+            } else {
+                draw_box_width(im, left, top, right, bot, width, red, green, blue);
+                if (alphabet) {
+                    image label = get_label(alphabet, names[class], (im.h*.03)/10);
+                    draw_label(im, top + width, left, label, rgb);
+                }
             }
         }
     }
@@ -524,6 +539,29 @@ void save_image_jpg(image p, const char *name)
     cvReleaseImage(&disp);
     free_image(copy);
 }
+
+void save_image_jpg_cut(image p, int left, int right, int top, int bot)
+{
+    image copy = copy_image(p);
+    if(p.c == 3) rgbgr_image(copy);
+    int x,y,k;
+
+    char buff[256];
+    sprintf(buff, "%s.jpg", name);
+
+    IplImage *disp = cvCreateImage(cvSize(right-left,bot-top), IPL_DEPTH_8U, p.c);
+    int step = disp->widthStep;
+    for(y = top; y < bottom; ++y){
+        for(x = left; x < right; ++x){
+            for(k= 0; k < p.c; ++k){
+                disp->imageData[(y-top)*step + (x-left)*p.c + k] = (unsigned char)(get_pixel(copy,x,y,k)*255);
+            }
+        }
+    }
+    cvSaveImage(buff, disp,0);
+    cvReleaseImage(&disp);
+    free_image(copy);
+}
 #endif
 
 void save_image_png(image im, const char *name)
@@ -582,6 +620,9 @@ image make_empty_image(int w, int h, int c)
     return out;
 }
 
+/**
+*  allocate memory to an image
+**/
 image make_image(int w, int h, int c)
 {
     image out = make_empty_image(w,h,c);
@@ -1307,11 +1348,18 @@ image get_image_layer(image m, int l)
     return out;
 }
 
+/**
+* get a pixel from a image
+**/
 float get_pixel(image m, int x, int y, int c)
 {
     assert(x < m.w && y < m.h && c < m.c);
     return m.data[c*m.h*m.w + y*m.w + x];
 }
+
+/**
+* normalizes the input to then call th get_pixel() function
+**/
 float get_pixel_extend(image m, int x, int y, int c)
 {
     if(x < 0) x = 0;
@@ -1321,18 +1369,29 @@ float get_pixel_extend(image m, int x, int y, int c)
     if(c < 0 || c >= m.c) return 0;
     return get_pixel(m, x, y, c);
 }
+
+/**
+* set a pixel in an image
+**/
 void set_pixel(image m, int x, int y, int c, float val)
 {
     if (x < 0 || y < 0 || c < 0 || x >= m.w || y >= m.h || c >= m.c) return;
     assert(x < m.w && y < m.h && c < m.c);
     m.data[c*m.h*m.w + y*m.w + x] = val;
 }
+
+/**
+* add a value to a pixel
+**/
 void add_pixel(image m, int x, int y, int c, float val)
 {
     assert(x < m.w && y < m.h && c < m.c);
     m.data[c*m.h*m.w + y*m.w + x] += val;
 }
 
+/**
+* print the image pixels values
+**/
 void print_image(image m)
 {
     int i, j, k;
